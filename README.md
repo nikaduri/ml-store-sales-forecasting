@@ -164,3 +164,119 @@ Validation WMAE: 1,444.52
 
 
 ## TFT Training
+
+
+---
+ 
+## Prophet Training
+ 
+XGBoost/LightGBM ერთ მოდელს წვრთნის მთელ დატასეტზე, Prophet კი პირიქით —
+ცალკე მოდელი ეგუება თითოეულ ~3,000 (Store, Dept) მწკრივს ცალ-ცალკე.
+თითოეული სწავლობს ტრენდს, წლიურ სეზონურობას და დღესასწაულების ეფექტს.
+ 
+დღესასწაულებს იგივე `HOLIDAYS` თარიღები აქვს, რაც ხის მოდელებში, უბრალოდ
+Prophet-ის თავისი `holidays` ინტერფეისით, რომელსაც `holidays_prior_scale` არეგულირებს.
+ 
+საბაზისო მოდელი: additive სეზონურობა, `changepoint_prior_scale=0.05`,
+`holidays_prior_scale=10`, `yearly_order=10`, `min_history=104`.
+ 
+![prophet_trainvsval](images/prophet_trainvsval.png)
+ 
+| იტერაცია | ცვლილება | train_wmae | val_wmae |
+|---|---|---|---|
+| baseline | `seasonality_mode` → additive | 1023.35 | 1181.83 |
+| multiplicative | `seasonality_mode` → multiplicative | 1025.14 | 1196.28 |
+| მოქნილი ტრენდი | `changepoint_prior_scale` → 0.5 | 976.00 | 1265.80 |
+| ხისტი ტრენდი | `changepoint_prior_scale` → 0.01 | 1136.05 | 1357.32 |
+| სუსტი holiday | `holidays_prior_scale` → 1.0 | 1023.30 | 1182.71 |
+| **ძლიერი holiday** | `holidays_prior_scale` → 20.0 | 1023.35 | **1179.47** |
+| მდიდარი სეზონურობა | `yearly_order` → 20 | 803.38 | 1229.33 |
+| გლუვი სეზონურობა | `yearly_order` → 6 | 1164.67 | 1194.70 |
+| მეტი მწკრივი | `min_history` → 60 | 1004.26 | 1183.88 |
+ 
+საუკეთესო შედეგი `holidays_prior_scale=20`-მ მოიტანა.
+ანუ ამ მწკრივებს დღესასწაულებზე მეტი აქცენტი
+სჭირდებათ და არა ნაკლები, რაც ლოგიკურია, რადგან holiday კვირებს 5x წონა
+აქვთ. ტრენდის knob-ს კი არც მოშვება და არც გამკაცრება არ დაეხმარა.
+ 
+![prophet_actualvspredicted](images/prophet_actualvspredicted.png)
+ 
+```yaml
+train_wmae: 1023.35
+val_wmae:   1179.47
+```
+ 
+---
+ 
+## DLinear Training
+ 
+DLinear სამიდან ყველაზე მარტივია, მწკრივს დეკომპოზიციას უკეთებს ტრენდად და სეზონურ ნაწილად
+(moving average-ით) და თითოეულს წრფივ Layer-ში ატარებს, შემდეგ კი კრებს.
+სულ რამდენიმე ასეული პარამეტრია. Prophet-ისგან განსხვავებით, ეს ერთი
+მოდელია, რომელიც ყველა მწკრივზე ერთად ტრენინგდება.
+ 
+baseline: 52-კვირიანი lookback ( რა დროის ნაწილს შეხედოს წარსულში ) , 8 კვირა წინ ( რამდენი ხნის დატა უნდა დააპროგნოზოს) , `kernel_size=25` ( Moving average-ს რომ გადავატარებთ მისი  ), 40 ეპოქა,
+`lr=1e-3`.
+ 
+![dlinear_trainvsval](images/dlinear_trainvsval.png)
+ 
+| იტერაცია | ცვლილება | train_wmae | val_wmae |
+|---|---|---|---|
+| baseline | — | 1700.94 | 1538.08 |
+| მაღალი LR | `lr` → 0.003 | 1701.85 | 1550.26 |
+| დაბალი LR | `lr` → 0.0003 | 1699.42 | 1529.67 |
+| პატარა kernel | `kernel_size` → 13 | 1701.92 | 1540.41 |
+| დიდი kernel | `kernel_size` → 51 | 1699.51 | 1532.82 |
+| მოკლე lookback | `input_len` → 26 | 2432.41 | 1775.65 |
+| **2-წლიანი lookback**  | `input_len` → 104 | **1247.04** | **1366.70** |
+| მეტი ეპოქა | `epochs` → 80 | 1703.86 | 1522.18 |
+ 
+აქ მთავარი ბერკეტი lookback-ის სიგრძე აღმოჩნდა — 104 კვირამდე გაზრდამ
+val_wmae 1538-დან 1366-მდე ჩამოწია, ყველაზე დიდი ნახტომი. learning rate
+და kernel_size თითქმის არაფერს ცვლიდა. overfit არ ჩანს, train და val
+ერთად ეცემა.
+ 
+![dlinear_actualvspredicted](images/dlinear_actualvspredicted.png)
+ 
+```yaml
+train_wmae: 1247.04
+val_wmae:   1366.70
+```
+ 
+---
+ 
+## PatchTST Training
+
+ 
+PatchTST პატარა transformer-ზე დაფუძნებული მოდელია, რომელიც იღებს მწკრივს და ჭრის რამდენიმე ნაწილად (Patches), ამ პაჩებს ატარებს ჯერ წრფივ ლეიერში, რომ მივიღოთ ემბედინგები, შემდეგ კი ვატარებთ ტრანფორმერში, რომელსაც გააჩნია რამდენიმე head, იმისთვის რომ სხვადასხვა კავშირი შეისწავლოს ამ ინფორმაციას შორის, აქედან გამომავალი ბრტყელდება და გადის წრფივ ლეირში.
+  
+baseline: იგივე 52/8 lookback/horizon ( წარსულის რა ნაწილს ვუყურებთ , მომავლის რა ნაწილი უნდა ვიწინასწარმეტყველოთ ) , 13-კვირიანი patches, 128-ის
+სიგანის, 3-ფენა ( ტრანსფორმერების რაოდენობა ) , 8-თავიანი encoder ( head-ების რ.ობა).
+ 
+![patchtst_trainvsval](images/patchtst_trainvsval.png)
+ 
+| იტერაცია | ცვლილება | train_wmae | val_wmae |
+|---|---|---|---|
+| baseline | — | 1075.19 | 1374.97 |
+| 2 ფენა | `depth` → 2 | 1122.47 | 1388.49 |
+| **ვიწრო (d_model 64)** ⭐ | `d_model` → 64 | **1129.66** | **1347.70** |
+| ფართო (d_model 256) | `d_model` → 256 | 1059.83 | 1416.82 |
+| წვრილი patches | `patch_len`/`stride` → 4 | 1073.56 | 1442.91 |
+| გადამფარავი patches | `patch_len` → 26 | 1067.04 | 1372.80 |
+| მეტი dropout | `dropout` → 0.2 | 1141.36 | 1364.34 |
+| მაღალი LR | `lr` → 0.003 | 1152.28 | 1403.96 |
+| 2-წლიანი lookback | `input_len` → 104 | 800.40 | 1500.09 |
+| მოკლე lookback | `input_len` → 26 | 1704.55 | 1567.02 |
+ 
+აქ პირიქით — უფრო პატარა მოდელი (`d_model=64`) აღმოჩნდა საუკეთესო. მეტი
+სიგანე უბრალოდ overfit-ს უკეთებდა. საინტერესოა,
+რომ 2-წლიანმა lookback-მა აქ პირდაპირ overfit მოიტანა (train ჩამოვარდა
+800-მდე, val კი გაუარესდა) — DLinear-ში ზუსტად იგივე ცვლილება საუკეთესო
+იყო.
+ 
+![patchtst_actualvspredicted](images/patchtst_actualvspredicted.png)
+ 
+```yaml
+train_wmae: 1129.66
+val_wmae:   1347.70
+```
