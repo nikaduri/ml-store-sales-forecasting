@@ -1,5 +1,54 @@
-# ml-store-sales-forecasting
+# Walmart Recruiting - Store Sales Forecasting
 
+## პრობლემის აღწერა
+
+** Walmart გაყიდვების პროგნოზირება
+
+ამ პროექტში, ჩვენი მიზანია ვოლმარტის 45 სხვადსხვა მაღაზიაში თითოეული განყოფილების (დეპარტამენტის) კვირის გაყიდვების წინასწარმეტყველება ისტორიული მონაცემების საფუძველზე.
+
+**გამოწვევები:**
+
+- **სეზონური რყევები**: გაყიდვები მნიშვნელოვნად იცვლება სხვადსხვა დროის პერიოდებში. განსაკუთრებით მნიშვნელოვანი სეზონები არის საშობაო კვირა, Thanksgiving და სხვა დღესასწაულები.
+
+- **აქციების გავლენა**: Walmart-ს წლის განმავლობაში აქვს აქციები, ეს აქციები გავლენას ახდენენ გაყიდვებზე, მაგრამ რომელი დეპარტამენტები არიან უფრო მეტად დატვირთულები - რთული დასადგენია.
+
+- **დღესასწაულების წონითი სიმძიმე**: ოთხი ძირითადი დღესასწაული (Superbowl, Labor day, Thanksgiving და Christmas) შეფასებისას 5 ჯერ უფრო მნიშვნელოვანია, ვიდრე ჩვეულებრივი კვირები.
+
+- **შეზღუდული ისტორია**: გაყიდვების მოდელირება რთულია, რადგან თითოეული დღესასწაული წელიწადში მხოლოდ ერთხელ მოდის - ამიტომ გვაქვს შეზღუდული მონაცემი სეზონური შაბლონების დასაფიქსირებლად.
+
+**მიზანი**: მშენიდობა მანქანა სწავლის მოდელი, რომელიც ზუსტად წინასწარმეტყველებს ყოველკვირეულ გაყიდვებს, რათა ვალმარტმა შეძლოს უკეთ დაგეგმოს მარაგი, შემოსავალი და ახალი ინვესტიციები.
+
+## რეპოზიტორის სტრუქტურა
+ 
+```
+walmart-store-sales-forecasting/
+├── README.md                          # დოკუმენტაცია
+├── .gitignore                         # Git ignore rules
+├── walmart_preprocessing.py           # პრეპროცესინგი/ feature engineering
+├── walmart_ts_common.py               # Common utilities (MLflow, metrics, helpers)
+│
+│   ├── xgboost_model_experiment.ipynb          # XGBoost  
+│   ├── lightgbm_model_experiment.ipynb         # LightGBM 
+│   ├── model_experiment_nbeats.ipynb           # N-BEATS 
+│   ├── model_experiment_prophet.ipynb          # Prophet 
+│   ├── model_experiment_dlinear.ipynb          # DLinear 
+│   ├── model_experiment_patchtst.ipynb         # PatchTST
+│   └── feature-engineering.ipynb               # Feature exploration / EDA
+│
+├── images/
+│   ├── dlinear_actualsVspredicted.png
+│   ├── dlinear_trainVsval.png
+│   ├── patchtst_actualsVspredicted.png
+│   ├── prophet_actualsVspredicted.png
+│   ├── prophet_trainVsval.png
+│   ├── nbeats_*.png
+│   ├── xgboost_*.png
+│   ├── lgbm_*.png
+│   └── weekly_sales.png
+│
+└── feature-engineering.py            # Feature engineering utilities
+```
+ 
 ## Train/Val/Test Split
 
 რადგან გვაქვს დროის ამოცანა, რენდომად არ უნდა დავყოთ დატასეტი. ამიტომ ავიღე ისე, რომ ბოლო **8 კვირა** არის ყოველთვის ვალიდაციის სეტი და დანარჩენი არის მთლიანად ტრენინგის სეტი.
