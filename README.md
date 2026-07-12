@@ -27,10 +27,12 @@ walmart-store-sales-forecasting/
 │
 │   ├── xgboost_model_experiment.ipynb          # XGBoost  
 │   ├── lightgbm_model_experiment.ipynb         # LightGBM 
-│   ├── model_experiment_nbeats.ipynb           # N-BEATS 
+│   ├── model_experiment_nbeats.ipynb           # N-BEATS
+│   ├── model_experiment_timesfm.ipynb          # TimesFM
 │   ├── model_experiment_prophet.ipynb          # Prophet 
 │   ├── model_experiment_dlinear.ipynb          # DLinear 
 │   ├── model_experiment_patchtst.ipynb         # PatchTST
+│   ├── model_inference.ipynb          			# Inference 
 │   └── feature-engineering.ipynb               # Feature exploration / EDA
 │
 ├── images/
@@ -46,6 +48,14 @@ walmart-store-sales-forecasting/
 │
 └── feature-engineering.py            # Feature engineering utilities
 ```
+
+
+## MLFlow / WanDB Links
+
+https://dagshub.com/nikaduri/ml-store-sales-forecasting.mlflow/#/experiments
+https://wandb.ai/ndurishvili/nbeats-experiment?nw=nwusernikadurishvili3
+https://wandb.ai/ndurishvili/timesfm_finetuning?nw=nwusernikadurishvili3
+
  
 ## Train/Val/Test Split
 
@@ -204,13 +214,10 @@ N-BEATS-ის ეფექტურობას განსაზღვრა�
 
 
 ```yaml
-Train log1p MAE: 0.2532
-Validation log1p MAE: 0.3179
-Validation WMAE: 1,444.52
+Train loss: 0.3416
+Validation loss: 0.5501
+Validation WMAE: 1,218.51
 ```
-
-
-## TFT Training
 
 
 ---
@@ -326,3 +333,22 @@ baseline: იგივე 52/8 lookback/horizon ( წარსულის რ�
 train_wmae: 1129.66
 val_wmae:   1347.70
 ```
+
+
+## TimesFM Finetuning
+
+TimesFM გუგლის Pretrained მოდელია, თავიდან ყველანაირი Finetuning-ის გარეშე მივიღე 1421.1 WMAE ვალიდაციის სეტზე.
+
+
+შემდეგ დავიწყე Finetuning-ის პროცესი, მოდელის პარამეტრების 85%-ს არ შევეხე, და დანარჩენი 15%-ის, რომელიც ძირითადად ბოლო ლეიერებს შეესაბამება ხოლმე,
+გაუმჯობესება და დატრენინგება დავიწყე. 
+საკმაოდ დიდი დრო წაიღო ამ ყველაფერმა და დიდად ვერ გაუმჯობესდა ვალიდაციის შედეგი, ტრენინგი იკლებდა, მაგრამ ვალიდაცია არა, ოვერფიტისკენ მიდრეკილი იყო, როგორც ამ გრაფიკზე ჩანს.
+
+![timesfm_loss](images/timesfm_loss.png)
+
+![timesfm_sample](images/timesfm_sample.png)
+
+ესაა სამაგალითო prediction-ები. finetuning აუმჯობესებს შედეგს როგორც ვხედავთ, მაგრამ ძალიან მცირედით. მეტი ეპოქა რომ ვაცადოთ უკეთესი იქნება, მაგრამ ოვერფიტს ვერ ავცდებით მაინც.
+
+
+
